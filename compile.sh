@@ -8,3 +8,5 @@ case `uname` in
 esac
 if [ ! -d bin ]; then mkdir bin; fi
 javac -d bin/ `find -L src/ -name '*.java'` -cp ${JSCLASSPATH}
+jar cf lib/jakstab.jar -C bin org
+jar uf lib/jakstab.jar ssl/pentium.ssl ssl/simplifications.ssl

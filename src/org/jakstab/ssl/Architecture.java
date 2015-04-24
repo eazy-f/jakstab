@@ -29,6 +29,7 @@ import org.jakstab.rtl.*;
 import org.jakstab.rtl.expressions.*;
 import org.jakstab.rtl.statements.*;
 import org.jakstab.ssl.parser.*;
+import org.jakstab.resource.IResource;
 
 import antlr.ANTLRException;
 
@@ -92,7 +93,6 @@ public class Architecture {
 	}
 
 	
-	private File specFile;
 	private Map<String, SSLInstruction> instructions;
 	private Map<String, List<SSLInstruction>> instrGroups;
 	private final RTLVariable stackPointer;
@@ -111,9 +111,9 @@ public class Architecture {
 	 * 
 	 * @param fileName The path of the SSL file to be parsed.
 	 */
-	public Architecture(String fileName) throws FileNotFoundException, ANTLRException {
+	public Architecture(IResource ssl) throws FileNotFoundException, ANTLRException {
 
-		parseSSL(fileName);
+		parseSSL(ssl.asStream());
 		magicInstructions = new MagicInstructions();
 		
 		stackPointer = ExpressionFactory.createVariable("%esp", 32);
@@ -435,11 +435,8 @@ public class Architecture {
 		return stackPointer.getBitWidth();
 	}
 	
-	public void parseSSL(String fileName) throws FileNotFoundException, ANTLRException {
-		specFile = new File(fileName);
-		logger.info("Reading machine specification from " + specFile.getName() + ".");
-
-		SSLLexer lex = new SSLLexer(new FileInputStream(specFile));
+	public void parseSSL(InputStream ssl) throws FileNotFoundException, ANTLRException {
+		SSLLexer lex = new SSLLexer(ssl);
 		SSLParser parser = new SSLParser(lex);
 		SSLPreprocessor prep = new SSLPreprocessor();
 

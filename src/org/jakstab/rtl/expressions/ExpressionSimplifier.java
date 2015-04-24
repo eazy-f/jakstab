@@ -22,6 +22,8 @@ import java.io.FileInputStream;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
+import java.nio.file.Files;
+import java.nio.file.Path;
 
 import org.jakstab.Options;
 import org.jakstab.rtl.Context;
@@ -60,10 +62,10 @@ public class ExpressionSimplifier {
 	
 	private ExpressionSimplifier() throws Exception {
 		// (x < y) | (x = y)   <->   x <= y
-		File specFile = new File(Options.jakstabHome + "/ssl/simplifications.ssl");
-		logger.info("Reading simplifications from " + specFile.getName() + ".");
+		Path specFile = Options.jakstabHome.resolve("/ssl/simplifications.ssl");
+		logger.info("Reading simplifications from " + specFile.toString() + ".");
 
-		SSLLexer lex = new SSLLexer(new FileInputStream(specFile));
+		SSLLexer lex = new SSLLexer(Files.newInputStream(specFile));
 		SSLParser parser = new SSLParser(lex);
 		SSLPreprocessor prep = new SSLPreprocessor();
 

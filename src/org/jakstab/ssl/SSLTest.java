@@ -18,6 +18,8 @@
 
 package org.jakstab.ssl;
 
+import org.jakstab.resource.JarResource;
+
 import antlr.ANTLRException;
 
 /**
@@ -36,7 +38,7 @@ public class SSLTest {
 
 		Architecture sslLib = null;
 		try {
-			sslLib = new Architecture(args[0]);
+			sslLib = new Architecture(new JarResource(args[0])); /* FIXME: change JarResource to FileResource */
 		} catch (ANTLRException e)  {
 			e.printStackTrace();
 			System.exit(1);

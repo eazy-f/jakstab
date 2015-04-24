@@ -26,6 +26,13 @@ import java.util.StringTokenizer;
 import java.util.TreeMap;
 
 import org.jakstab.util.Logger;
+import org.jakstab.resource.*;
+import java.nio.file.Path;
+import java.nio.file.FileSystems;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.io.IOException;;
+import java.util.HashMap;
 
 /**
  * Parses and holds command line options.
@@ -40,14 +47,23 @@ public class Options {
 	private final static int indentation = 22;
 
 	
-	public static final String jakstabHome;
+	public static final Path jakstabHome;
 	static {
 		// Get path of Jakstab's directory from VM
-		String classFileName = Options.class.getResource("/org/jakstab/Options.class").getPath();
-		if (classFileName.startsWith("file:")) 
-			classFileName = classFileName.substring(5);
-		classFileName = classFileName.replace("%20", " ");
-		jakstabHome = (new File(classFileName)).getParentFile().getParentFile().getParentFile().getParent();
+        RuntimeException runtimeError =
+            new RuntimeException("failed to initialize jakstabHome");
+        try {
+            URI classURI = Options.class.getResource("/org/jakstab/Options.class").toURI();
+            Map<String, ?> fsOptions = new HashMap<String,String>();
+            jakstabHome = FileSystems.newFileSystem(classURI, fsOptions)
+                                     .getPath("/");
+        }
+        catch (IOException e) {
+            throw runtimeError;
+        }
+        catch (URISyntaxException e) {
+            throw runtimeError;
+        }
 	}
 	
 	private static Map<String,JOption<?>> options = new TreeMap<String,JOption<?>>(new Comparator<String>() {
@@ -72,10 +88,9 @@ public class Options {
 	
 	public static String mainFilename = null;
 	public static List<String> moduleFilenames = new LinkedList<String>();
-
 	public static String arguments;
 
-	public static JOption<String> sslFilename = JOption.create("ssl", "file", jakstabHome + "/ssl/pentium.ssl", "Use <file> instead of pentium.ssl.");
+	public static JOption<? extends IResource> sslFilename = JOption.create("ssl", "file", new JarResource("/ssl/pentium.ssl"), "Use <file> instead of pentium.ssl.");
 	public static JOption<Long> startAddress = JOption.create("a", "address", -1L, "Start analysis at given virtual address.");
 	public static JOption<Boolean> wdm = JOption.create("wdm", "WDM mode, export main function as DriverMain.");
 	public static JOption<Boolean> allEdges = JOption.create("all-edges", "Generate a true over-approximation and add edges to all possible addresses when over-approximating a jump (very slow!).");

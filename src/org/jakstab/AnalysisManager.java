@@ -24,6 +24,15 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Files;
+import java.nio.file.FileSystem;
+import java.nio.file.FileSystems;
+import java.nio.file.FileVisitor;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.FileVisitResult;
+import java.nio.file.attribute.BasicFileAttributes;
 
 import org.jakstab.analysis.ConfigurableProgramAnalysis;
 import org.jakstab.util.Logger;
@@ -51,9 +60,8 @@ public class AnalysisManager {
 		analysisInstances = new HashMap<Class<? extends ConfigurableProgramAnalysis>, ConfigurableProgramAnalysis>();
 		
 		// Enumerate all analyses and register them
-		String pkg = "org.jakstab.analysis";
-  		File dir = new File(Options.jakstabHome + "/bin/" + pkg.replace(".", "/"));
-		List<Class<? extends ConfigurableProgramAnalysis>> classes = findCPAClasses(dir, pkg);
+		String classDir = "org/jakstab/analysis";
+		List<Class<? extends ConfigurableProgramAnalysis>> classes = findCPAClasses(Options.jakstabHome.resolve(classDir));
 		for(Class<? extends ConfigurableProgramAnalysis> cpaClass : classes) {
 			AnalysisProperties aProps = new AnalysisProperties();
 			try {
@@ -144,35 +152,53 @@ public class AnalysisManager {
 		return new String(shds);
 	}
 	
-	private static List<Class<? extends ConfigurableProgramAnalysis>> findCPAClasses(File directory, String packageName) {
+	private static List<Class<? extends ConfigurableProgramAnalysis>> findCPAClasses(Path classDir) {
 		
-        List<Class<? extends ConfigurableProgramAnalysis>> classes = new ArrayList<Class<? extends ConfigurableProgramAnalysis>>();
+        final List<Class<? extends ConfigurableProgramAnalysis>> classes = new ArrayList<Class<? extends ConfigurableProgramAnalysis>>();
 
-        for (File file : directory.listFiles()) {
-        	String fileName = file.getName();
-            if (file.isDirectory()) {
-                assert !fileName.contains(".");
-            	classes.addAll(findCPAClasses(file, packageName + "." + fileName));
-            } else if (fileName.endsWith(".class")) {
-            	Class<?> clazz;
-            	try {
-            		try {
-            			clazz = Class.forName(packageName + '.' + fileName.substring(0, fileName.length() - 6));
-            		} catch (ExceptionInInitializerError e) {
-            			clazz = Class.forName(packageName + '.' + fileName.substring(0, fileName.length() - 6),
-            					false, Thread.currentThread().getContextClassLoader());
-            		}
-            		if (ConfigurableProgramAnalysis.class.isAssignableFrom(clazz)) {
-            			int mod = clazz.getModifiers();
-            			if (!Modifier.isAbstract(mod) && !Modifier.isInterface(mod))
-            				classes.add(clazz.asSubclass(ConfigurableProgramAnalysis.class));
-            		}
-            	} catch (ClassNotFoundException e) {
-            		logger.warn("Could not load class " + packageName + "." + fileName);
-            	}
+        FileVisitor<Path> loader = new SimpleFileVisitor<Path>() {
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attrs)
+                throws IOException
+            {
+                if (file.toString().endsWith(".class")) {
+                    loadClassFromPath(file, classes);
+                }
+                return FileVisitResult.CONTINUE;
             }
+        };
+        try {
+            Files.walkFileTree(classDir, loader);
+        } catch (IOException e) {
+            logger.warn("failed to load CPA classes");
         }
+
         return classes;
     }
-	
+
+    private static void loadClassFromPath(
+            Path file,
+            List<Class<? extends ConfigurableProgramAnalysis>> classes)
+    {
+        String fileName = file.toString();
+        String className =
+            fileName.substring(1, fileName.toString().length() - 6)
+            .replace("/", ".");
+        Class<?> clazz;
+        try {
+            try {
+                clazz = Class.forName(className);
+            } catch (ExceptionInInitializerError e) {
+                clazz = Class.forName(className, false,
+                                      Thread.currentThread().getContextClassLoader());
+            }
+            if (ConfigurableProgramAnalysis.class.isAssignableFrom(clazz)) {
+                int mod = clazz.getModifiers();
+                if (!Modifier.isAbstract(mod) && !Modifier.isInterface(mod))
+                    classes.add(clazz.asSubclass(ConfigurableProgramAnalysis.class));
+            }
+        } catch (ClassNotFoundException e) {
+            logger.warn("Could not load class " + className);
+        }
+    }
 }
