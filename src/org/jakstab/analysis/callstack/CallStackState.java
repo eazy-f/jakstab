@@ -90,6 +90,11 @@ public class CallStackState implements AbstractState {
 					postStack = new LinkedList<RTLLabel>(callStack);
 					postStack.push(new RTLLabel(Program.getProgram().getHarness().getFallthroughAddress(stmt.getAddress())));
 				}
+                // Stub
+                else if (Program.getProgram().isStub(stmt.getAddress())) {
+                    logger.warn("Address " + stmt.getAddress() + "is a stub and will not be added to stack analysis");
+                    postStack = new LinkedList<RTLLabel>(callStack);
+                }
 				// Call
 				else if (gotoStmt.getType() == RTLGoto.Type.CALL) {
 					RTLLabel returnLabel; 
